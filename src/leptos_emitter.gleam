@@ -1,8 +1,14 @@
 import gleam/io
 import gleam/string
-import vxml_parser.{debug_print_vxmls_as_leptos_xml, emit_vxmls, parse_file}
+import vxml_parser.{
+  type VXML, debug_print_vxmls_as_leptos_xml, emit_vxmls, parse_file,
+}
 
 const ins = string.inspect
+
+fn leptos_emitter(vxmls: List(VXML)) -> String {
+  todo
+}
 
 pub fn main() {
   let path = "../vxml_parser/test/sample.vxml"
