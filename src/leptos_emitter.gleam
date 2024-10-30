@@ -1,3 +1,4 @@
+import gleam/option
 import shellout
 import simplifile
 import gleam/list
@@ -9,16 +10,29 @@ import vxml_parser.{
 
 const ins = string.inspect
 
+type SkipNext = Bool
+
 fn debug_print_vxml_as_leptos_xml_internal(
   t: VXML,
+  next: option.Option(VXML),
   output: String
-) {
+) -> #(String, SkipNext) {
+  
   case t {
     T(_, blamed_contents) -> {
       let contents = list.map(blamed_contents, fn(t) {
             t.content
       })
-      output <> "r#\"" <> string.join(contents, " ") <> "\"#"
+      let #(contents, skip_next) = case next {
+        option.Some(T(_, blamed_contents)) -> {
+          #(contents |> list.append(list.map(blamed_contents, fn(t) {
+            t.content
+          })), True)
+        }
+        _ -> #(contents, False)
+      }
+
+      #(output <> "r#\"" <> string.join(contents, " ") <> "\"#", skip_next)
     }
 
     V(_, tag, blamed_attributes, children) -> {
@@ -28,7 +42,7 @@ fn debug_print_vxml_as_leptos_xml_internal(
           let attrs = list.map(blamed_attributes, fn(t) {
             { " " <> t.key <> "=\"" <> t.value <> "\"" }
           })
-          output
+          #(output
           <> "<"
           <> tag
           <> string.join(attrs, "")
@@ -39,7 +53,7 @@ fn debug_print_vxml_as_leptos_xml_internal(
           )
           <> "</"
           <> tag
-          <> ">"
+          <> ">", False)
         }
 
         True -> {
@@ -47,11 +61,11 @@ fn debug_print_vxml_as_leptos_xml_internal(
             { " " <> t.key <> "=\"" <> t.value <> "\"" }
           })
 
-          output
+          #(output
             <> "<"
             <> tag
             <> string.join(attrs, "")
-            <> "></" <> tag <> ">"
+            <> "></" <> tag <> ">", False)
 
         }
       }
@@ -65,15 +79,28 @@ fn debug_print_vxmls_as_leptos_xml_internal(
 ) {
   case vxmls {
     [] -> output
-    [first, ..rest] -> {
-      let output = debug_print_vxml_as_leptos_xml_internal(first, output)
-      debug_print_vxmls_as_leptos_xml_internal(rest, output)
+    [last] -> {
+      let #(output, _) = debug_print_vxml_as_leptos_xml_internal(last, option.None, output)
+      output
+    }
+    [first, next, ..rest] -> {
+      let #(output, skip_next) = debug_print_vxml_as_leptos_xml_internal(first, option.Some(next), output)
+      case skip_next {
+        True -> {
+          debug_print_vxmls_as_leptos_xml_internal(rest, output)
+        }
+        False -> {
+          debug_print_vxmls_as_leptos_xml_internal(list.append([next], rest), output)
+        }
+      }
+      
     }
   }
 }
 
 pub fn leptos_emitter(vxmls: List(VXML)) {
   let output: String = ""
+
   debug_print_vxmls_as_leptos_xml_internal(vxmls, output)
 }
 
