@@ -4,10 +4,11 @@ import gleam/list
 import gleam/io
 import gleam/string
 import vxml_parser.{
-  type VXML, T, V,  parse_file, debug_print_spaces
+  type VXML, T, V,  parse_file
 }
 
 const ins = string.inspect
+const spaces = "    "
 
 fn map_with_special_last(
   z: List(a),
@@ -82,7 +83,7 @@ fn debug_print_vxml_as_leptos_xml_internal(
       output <> string.join(map, "")
     }
 
-    V(blame, tag, blamed_attributes, children) -> {
+    V(_, tag, blamed_attributes, children) -> {
       case list.is_empty(children) {
         False -> {
           
@@ -96,7 +97,7 @@ fn debug_print_vxml_as_leptos_xml_internal(
           <> ">"
           <> debug_print_vxmls_as_leptos_xml_internal(
             pre_blame,
-            indentation <> debug_print_spaces,
+            indentation <> spaces,
             children,
             output
           )
@@ -158,7 +159,6 @@ fn write_file(output: String) {
     Error(#(_, error)) -> io.println("Error formating output : " <> error)
   }
 }
-
 
 pub fn main() {
   let path = "test/sample.vxml"
