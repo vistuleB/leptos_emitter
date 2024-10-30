@@ -8,10 +8,8 @@ import vxml_parser.{
 }
 
 const ins = string.inspect
-const spaces = "    "
 
 fn debug_print_vxml_as_leptos_xml_internal(
-  indentation: String,
   t: VXML,
   output: String
 ) {
@@ -36,7 +34,6 @@ fn debug_print_vxml_as_leptos_xml_internal(
           <> string.join(attrs, "")
           <> ">"
           <> debug_print_vxmls_as_leptos_xml_internal(
-            indentation <> spaces,
             children,
             output
           )
@@ -63,22 +60,21 @@ fn debug_print_vxml_as_leptos_xml_internal(
 }
 
 fn debug_print_vxmls_as_leptos_xml_internal(
-  indentation: String,
   vxmls: List(VXML),
   output: String
 ) {
   case vxmls {
     [] -> output
     [first, ..rest] -> {
-      let output = debug_print_vxml_as_leptos_xml_internal( indentation, first, output)
-      debug_print_vxmls_as_leptos_xml_internal( indentation, rest, output)
+      let output = debug_print_vxml_as_leptos_xml_internal(first, output)
+      debug_print_vxmls_as_leptos_xml_internal(rest, output)
     }
   }
 }
 
 pub fn leptos_emitter(vxmls: List(VXML)) {
   let output: String = ""
-  debug_print_vxmls_as_leptos_xml_internal( "", vxmls, output)
+  debug_print_vxmls_as_leptos_xml_internal(vxmls, output)
 }
 
 fn update_for_format(output: String) -> String {
