@@ -11,18 +11,16 @@ const ins = string.inspect
 const spaces = "    "
 
 fn debug_print_vxml_as_leptos_xml_internal(
-  pre_blame: String,
   indentation: String,
   t: VXML,
   output: String
 ) {
   case t {
     T(_, blamed_contents) -> {
-
       let contents = list.map(blamed_contents, fn(t) {
             t.content
       })
-      output <> "r#\"" <> string.join(contents, "") <> "\"#"
+      output <> "r#\"" <> string.join(contents, " ") <> "\"#"
     }
 
     V(_, tag, blamed_attributes, children) -> {
@@ -38,7 +36,6 @@ fn debug_print_vxml_as_leptos_xml_internal(
           <> string.join(attrs, "")
           <> ">"
           <> debug_print_vxmls_as_leptos_xml_internal(
-            pre_blame,
             indentation <> spaces,
             children,
             output
@@ -66,7 +63,6 @@ fn debug_print_vxml_as_leptos_xml_internal(
 }
 
 fn debug_print_vxmls_as_leptos_xml_internal(
-  pre_blame: String,
   indentation: String,
   vxmls: List(VXML),
   output: String
@@ -74,15 +70,15 @@ fn debug_print_vxmls_as_leptos_xml_internal(
   case vxmls {
     [] -> output
     [first, ..rest] -> {
-      let output = debug_print_vxml_as_leptos_xml_internal(pre_blame, indentation, first, output)
-      debug_print_vxmls_as_leptos_xml_internal(pre_blame, indentation, rest, output)
+      let output = debug_print_vxml_as_leptos_xml_internal( indentation, first, output)
+      debug_print_vxmls_as_leptos_xml_internal( indentation, rest, output)
     }
   }
 }
 
-pub fn leptos_emitter(pre_blame: String, vxmls: List(VXML)) {
+pub fn leptos_emitter(vxmls: List(VXML)) {
   let output: String = ""
-  debug_print_vxmls_as_leptos_xml_internal(pre_blame, "", vxmls, output)
+  debug_print_vxmls_as_leptos_xml_internal( "", vxmls, output)
 }
 
 fn update_for_format(output: String) -> String {
@@ -109,7 +105,7 @@ pub fn main() {
     Ok(vxmls) -> {
       io.println("\nsuccessfully parsed; pure string emitter:\n")
       io.println("\nmakeshit leptos-debug-emitter:\n")
-      let _ = write_file(leptos_emitter("(_no_message_)", vxmls))
+      let _ = write_file(leptos_emitter(vxmls))
     }
     Error(e) -> io.println("there was an error: " <> ins(e))
   }
