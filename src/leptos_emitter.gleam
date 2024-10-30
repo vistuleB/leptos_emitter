@@ -1,3 +1,5 @@
+import gleam/float
+import gleam/int
 import gleam/option
 import shellout
 import simplifile
@@ -11,6 +13,17 @@ import vxml_parser.{
 const ins = string.inspect
 
 type SkipNext = Bool
+
+fn to_leptos_attribute(key, value) {
+  case float.parse(value), int.parse(value) {
+    Error(_), Error(_) -> {
+        { " " <> key <> "=\"" <> value <> "\"" }
+    }
+    _, _ -> {
+        { " " <> key <> "=" <> value <> "" }
+    }
+  }
+}
 
 fn debug_print_vxml_as_leptos_xml_internal(
   t: VXML,
@@ -40,7 +53,7 @@ fn debug_print_vxml_as_leptos_xml_internal(
         False -> {
           
           let attrs = list.map(blamed_attributes, fn(t) {
-            { " " <> t.key <> "=\"" <> t.value <> "\"" }
+            to_leptos_attribute(t.key, t.value)
           })
           #(output
           <> "<"
@@ -58,7 +71,7 @@ fn debug_print_vxml_as_leptos_xml_internal(
 
         True -> {
           let attrs = list.map(blamed_attributes, fn(t) {
-            { " " <> t.key <> "=\"" <> t.value <> "\"" }
+            to_leptos_attribute(t.key, t.value)
           })
 
           #(output
