@@ -10,41 +10,6 @@ import vxml_parser.{
 const ins = string.inspect
 const spaces = "    "
 
-fn map_with_special_last(
-  z: List(a),
-  fn1: fn(a) -> b,
-  fn2: fn(a) -> b,
-) -> List(b) {
-  case z {
-    [] -> []
-    [last] -> [fn2(last)]
-    [first, ..rest] ->
-      fn1(first) |> list.prepend(map_with_special_last(rest, fn1, fn2), _)
-  }
-}
-
-fn map_with_special_first_last(
-  z: List(a),
-  fn_first: fn(a) -> b,
-  fn_middle: fn(a) -> b,
-  fn_last: fn(a) -> b,
-  fn_first_and_last: fn(a) -> b,
-) -> List(b) {
-  case z {
-    [] -> []
-    [first, ..rest] -> {
-      case rest {
-        [] -> list.prepend([], fn_first_and_last(first))
-
-        [_, ..] -> {
-          fn_first(first)
-          |> list.prepend(map_with_special_last(rest, fn_middle, fn_last), _)
-        }
-      }
-    }
-  }
-}
-
 fn debug_print_vxml_as_leptos_xml_internal(
   pre_blame: String,
   indentation: String,
@@ -53,34 +18,11 @@ fn debug_print_vxml_as_leptos_xml_internal(
 ) {
   case t {
     T(_, blamed_contents) -> {
-      let map = map_with_special_first_last(
-        blamed_contents,
-        fn(first) {
-          {
-            "r#\""
-            <> first.content
-          }
-        },
-        fn(middle) {
-          {
-            middle.content
-          }
-        },
-        fn(last) {
-          {
-            last.content
-            <> "\"#"
-          }
-        },
-        fn(first_and_last) {
-          {
-            "r#\""
-            <> first_and_last.content
-            <> "\"#"
-          }
-        },
-      )
-      output <> string.join(map, "")
+
+      let contents = list.map(blamed_contents, fn(t) {
+            t.content
+      })
+      output <> "r#\"" <> string.join(contents, "") <> "\"#"
     }
 
     V(_, tag, blamed_attributes, children) -> {
