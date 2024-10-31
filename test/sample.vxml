@@ -1,26 +1,20 @@
-<> vxmlSample
-    attr1 mom
-    attr2 dad
+<> Section
     <>
-        "this is a text child"
-        "with two lines"
-    <> html
-        <> header
-            charset utf-8
-        <> body
-            <> div
-                <>
-                    "some text"
-                    "more text"
-                    "further text"
-                <>
-                    "consecutive text"
-                    "node"
-        <> goda
-            <> child1
-                attr5 value23
-            <> child2
+        "lorem lorem"
+        "lorem lorem lorem"
+    <> Image
+        src images
+    <>
+        "math $Math$"
+    <>
+        "Follow up"
+
+    <> Exercises
+        <> Exercise
             <>
-                "hello I am child3, but the first text child"
-            <> child4
-<> yello
+                "Exercise Content"
+            <> Grid
+                cols 3
+                <> Item
+                <> Item
+                <> Item
