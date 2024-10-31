@@ -15,11 +15,11 @@ const ins = string.inspect
 type SkipNext = Bool
 
 fn to_leptos_attribute(key, value) {
-  case float.parse(value), int.parse(value) {
-    Error(_), Error(_) -> {
+  case float.parse(value), int.parse(value), value == "false" || value == "true", string.starts_with(value, "vec[") {
+    Error(_), Error(_), False, False -> {
         { " " <> key <> "=\"" <> value <> "\"" }
     }
-    _, _ -> {
+    _, _, _, _ -> {
         { " " <> key <> "=" <> value <> "" }
     }
   }
