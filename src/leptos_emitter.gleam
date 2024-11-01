@@ -62,7 +62,7 @@ fn debug_print_vxml_as_leptos_xml_internal(
           <> ">"
           <> debug_print_vxmls_as_leptos_xml_internal(
             children,
-            output
+            ""
           )
           <> "</"
           <> tag
