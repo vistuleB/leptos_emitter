@@ -45,7 +45,7 @@ fn debug_print_vxml_as_leptos_xml_internal(
         _ -> #(contents, False)
       }
 
-      #(output <> "r#\"" <> string.join(contents, " ") <> "\"#", skip_next)
+      #(output <> "r#\"" <> string.join(contents, "\n") <> "\"#", skip_next)
     }
 
     V(_, tag, blamed_attributes, children) -> {
@@ -79,7 +79,6 @@ fn debug_print_vxml_as_leptos_xml_internal(
             <> tag
             <> string.join(attrs, "")
             <> "></" <> tag <> ">", False)
-
         }
       }
     }
