@@ -1,4 +1,5 @@
 <> Section
+    bool vec[test]
     <>
         "lorem lorem"
         "lorem lorem lorem"

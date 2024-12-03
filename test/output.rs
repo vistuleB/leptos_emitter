@@ -1,14 +1,12 @@
 view! {
-    <Section>
-        r#"lorem lorem lorem lorem lorem"#<Image src="images"></Image>r#"math $Math$ Follow up"#
-        <Exercises>
-            r#"lorem lorem lorem lorem lorem"#<Image src="images"></Image>r#"math $Math$ Follow up"#
+    <Section bool=vec[test]>
+        r#"lorem lorem
+        lorem lorem lorem"#<Image src="images"></Image>r#"math $Math$
+        Follow up"#<Exercises>
             <Exercise>
-                r#"lorem lorem lorem lorem lorem"#<Image src="images"></Image>
-                r#"math $Math$ Follow up"#r#"Exercise Content"#
-                <Grid cols=3>
-                    r#"lorem lorem lorem lorem lorem"#<Image src="images"></Image>
-                    r#"math $Math$ Follow up"#r#"Exercise Content"#<Item></Item><Item></Item>
+                r#"Exercise Content"#<Grid cols=3>
+                    <Item></Item>
+                    <Item></Item>
                     <Item></Item>
                 </Grid>
             </Exercise>
