@@ -60,18 +60,30 @@ fn debug_print_vxml_as_jsx_internal(
             blamed_attributes
             |> list.filter(filter_counter_attributes)
             |> list.map(fn(t) { to_solid_attribute(t.key, t.value) })
-          #(
-            output
-              <> "<"
-              <> tag
-              <> string.join(attrs, "")
-              <> ">"
-              <> debug_print_vxmls_as_jsx_internal(children, "")
-              <> "</"
-              <> tag
-              <> ">",
-            False,
-          )
+
+          let is_self_closed =
+            blamed_attributes
+            |> list.map(fn(t) { t.key })
+            |> list.contains("is_self_closed")
+
+          case is_self_closed {
+            True -> #(
+              output <> "<" <> tag <> string.join(attrs, "") <> " />",
+              False,
+            )
+            _ -> #(
+              output
+                <> "<"
+                <> tag
+                <> string.join(attrs, "")
+                <> ">"
+                <> debug_print_vxmls_as_jsx_internal(children, "")
+                <> "</"
+                <> tag
+                <> ">",
+              False,
+            )
+          }
         }
 
         True -> {
@@ -80,16 +92,29 @@ fn debug_print_vxml_as_jsx_internal(
             |> list.filter(filter_counter_attributes)
             |> list.map(fn(t) { to_solid_attribute(t.key, t.value) })
 
-          #(
-            output
-              <> "<"
-              <> tag
-              <> string.join(attrs, "")
-              <> "></"
-              <> tag
-              <> ">",
-            False,
-          )
+          let is_self_closed =
+            blamed_attributes
+            |> list.map(fn(t) { t.key })
+            |> list.contains("is_self_closed")
+
+          case is_self_closed {
+            True -> #(
+              output <> "<" <> tag <> string.join(attrs, "") <> " />",
+              False,
+            )
+            False -> #(
+              output
+                <> "<"
+                <> tag
+                <> string.join(attrs, "")
+                <> ">"
+                <> debug_print_vxmls_as_jsx_internal(children, "")
+                <> "</"
+                <> tag
+                <> ">",
+              False,
+            )
+          }
         }
       }
     }
@@ -123,14 +148,16 @@ pub fn solid_emitter(vxmls: List(VXML)) {
   debug_print_vxmls_as_jsx_internal(vxmls, "")
 }
 
-fn add_boilerplate(output: String, key: String) -> String {
-  "export const Article = () => {
+fn add_boilerplate(output: String) -> String {
+  "const Article = () => {
     return <> " <> output <> " </>
-  }"
+  }
+  export default Article
+  "
 }
 
-pub fn write_file_solid(output: String, path: String, key: String) {
-  let assert Ok(Nil) = simplifile.write(path, add_boilerplate(output, key))
+pub fn write_file_solid(output: String, path: String) {
+  let assert Ok(Nil) = simplifile.write(path, add_boilerplate(output))
   // case shellout.command("leptosfmt", with: [path], in: ".", opt: []) {
   //   Ok(_) -> io.println("Output formatted with leptosfmt")
   //   Error(#(_, error)) -> io.println("Error formating output : " <> error)
@@ -141,10 +168,6 @@ pub fn write_file_solid(output: String, path: String, key: String) {
 pub fn write_splitted_jsx(vxml: VXML, path: String) {
   split_children_of_node(vxml)
   |> dict.each(fn(split_key, node) {
-    write_file_solid(
-      solid_emitter([node]),
-      path <> "/" <> split_key <> ".tsx",
-      split_key,
-    )
+    write_file_solid(solid_emitter([node]), path <> "/" <> split_key <> ".tsx")
   })
 }

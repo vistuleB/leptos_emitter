@@ -15,7 +15,7 @@ pub fn write_splitted(vxml: VXML, path: String, emitter: String) {
 pub fn write_file(vxml: VXML, path: String, emitter: String) {
   case emitter {
     "leptos" -> write_file_leptos(leptos_emitter([vxml]), path)
-    "solid" -> write_file_solid(solid_emitter([vxml]), path, "Test")
+    "solid" -> write_file_solid(solid_emitter([vxml]), path)
     _ -> io.println_error("Emitter " <> emitter <> " is not supported")
   }
 }
