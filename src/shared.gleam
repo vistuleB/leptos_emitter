@@ -32,5 +32,5 @@ pub fn split_children_of_node(node: VXML) -> Dict(String, VXML) {
 }
 
 pub fn filter_counter_attributes(b_a: vxml_parser.BlamedAttribute) {
-  !list.contains(["counter", "roman_counter"], b_a.key)
+  !list.contains(["counter", "roman_counter", "is_self_closed"], b_a.key)
 }

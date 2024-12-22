@@ -50,7 +50,10 @@ fn debug_print_vxml_as_jsx_internal(
         _ -> #(contents, False)
       }
 
-      #(output <> "{`" <> string.join(contents, "\n") <> "`}", skip_next)
+      #(
+        output <> "{String.raw`" <> string.join(contents, "\n") <> "`}",
+        skip_next,
+      )
     }
 
     V(_, tag, blamed_attributes, children) -> {
@@ -150,7 +153,7 @@ pub fn solid_emitter(vxmls: List(VXML)) {
 
 fn add_boilerplate(output: String) -> String {
   "const Article = () => {
-    return <> " <> output <> " </>
+    return <>" <> output <> "</>
   }
   export default Article
   "
