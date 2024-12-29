@@ -11,7 +11,7 @@ import vxml_parser.{type VXML, T, V}
 type SkipNext =
   Bool
 
-fn to_solid_attribute(key, value) {
+fn to_solid_attribute(key, value) -> String {
   let value = string.trim(value)
   case
     float.parse(value),
@@ -23,7 +23,7 @@ fn to_solid_attribute(key, value) {
       { " " <> key <> "=\"" <> value <> "\"" }
     }
     _, _, _, True -> {
-      { " " <> key <> "={" <> string.drop_left(value, 4) <> "}" }
+      { " " <> key <> "={" <> string.drop_start(value, 4) <> "}" }
     }
     _, _, _, _ -> {
       { " " <> key <> "={" <> value <> "}" }
@@ -124,7 +124,10 @@ fn debug_print_vxml_as_jsx_internal(
   }
 }
 
-fn debug_print_vxmls_as_jsx_internal(vxmls: List(VXML), output: String) {
+fn debug_print_vxmls_as_jsx_internal(
+  vxmls: List(VXML),
+  output: String,
+) -> String {
   case vxmls {
     [] -> output
     [last] -> {
@@ -147,7 +150,7 @@ fn debug_print_vxmls_as_jsx_internal(vxmls: List(VXML), output: String) {
   }
 }
 
-pub fn solid_emitter(vxmls: List(VXML)) {
+pub fn solid_emitter(vxmls: List(VXML)) -> String {
   debug_print_vxmls_as_jsx_internal(vxmls, "")
 }
 
@@ -159,7 +162,7 @@ fn add_boilerplate(output: String) -> String {
   "
 }
 
-pub fn write_file_solid(output: String, path: String) {
+pub fn write_file_solid(output: String, path: String) -> Nil {
   let assert Ok(Nil) = simplifile.write(path, add_boilerplate(output))
   // case shellout.command("leptosfmt", with: [path], in: ".", opt: []) {
   //   Ok(_) -> io.println("Output formatted with leptosfmt")
@@ -168,7 +171,7 @@ pub fn write_file_solid(output: String, path: String) {
   Nil
 }
 
-pub fn write_splitted_jsx(vxml: VXML, path: String) {
+pub fn write_splitted_jsx(vxml: VXML, path: String) -> Nil {
   split_children_of_node(vxml)
   |> dict.each(fn(split_key, node) {
     write_file_solid(solid_emitter([node]), path <> "/" <> split_key <> ".tsx")

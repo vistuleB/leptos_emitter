@@ -1,5 +1,5 @@
 view! {
-    <Section bool=vec[test]>
+    <Section bool="vec[test]">
         r#"lorem lorem
         lorem lorem lorem"#<Image src="images"></Image>r#"math $Math$
         Follow up"#<Exercises>
