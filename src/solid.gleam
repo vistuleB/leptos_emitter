@@ -1,15 +1,12 @@
 import gleam/dict
+import gleam/result
 import gleam/float
 import gleam/int
 import gleam/list
-import gleam/option
 import gleam/string
 import shared.{filter_counter_attributes, split_children_of_node}
 import simplifile
 import vxml_parser.{type VXML, T, V}
-
-type SkipNext =
-  Bool
 
 fn to_solid_attribute(key, value) -> String {
   let value = string.trim(value)
@@ -31,29 +28,30 @@ fn to_solid_attribute(key, value) -> String {
   }
 }
 
-fn debug_print_vxml_as_jsx_internal(
-  t: VXML,
-  next: option.Option(VXML),
-  output: String,
-) -> #(String, SkipNext) {
+fn jsx_string_processor(content: String) -> String {
+  content
+  |> string.replace("{", "&#123;")
+  |> string.replace("}", "&#125;")
+  |> string.replace("<", "&lt;")
+  |> string.replace(">", "&gt;")
+}
+
+fn vxmls_to_jsx(
+  vxmls: List(VXML)
+) -> String {
+  vxmls
+  |> list.map(vxml_to_jsx)
+  |> string.join("")
+}
+
+pub fn vxml_to_jsx(
+  t: VXML
+) -> String {
   case t {
     T(_, blamed_contents) -> {
-      let contents = list.map(blamed_contents, fn(t) { t.content })
-      let #(contents, skip_next) = case next {
-        option.Some(T(_, blamed_contents)) -> {
-          #(
-            contents
-              |> list.append(list.map(blamed_contents, fn(t) { t.content })),
-            True,
-          )
-        }
-        _ -> #(contents, False)
-      }
-
-      #(
-        output <> "{String.raw`" <> string.join(contents, "\n") <> "`}",
-        skip_next,
-      )
+      blamed_contents
+      |> list.map(fn(t) {jsx_string_processor(t.content)})
+      |> string.join("\n{\" \"}")
     }
 
     V(_, tag, blamed_attributes, children) -> {
@@ -70,22 +68,17 @@ fn debug_print_vxml_as_jsx_internal(
             |> list.contains("is_self_closed")
 
           case is_self_closed {
-            True -> #(
-              output <> "<" <> tag <> string.join(attrs, "") <> " />",
-              False,
-            )
-            _ -> #(
-              output
-                <> "<"
-                <> tag
-                <> string.join(attrs, "")
-                <> ">"
-                <> debug_print_vxmls_as_jsx_internal(children, "")
-                <> "</"
-                <> tag
-                <> ">",
-              False,
-            )
+            True -> "<" <> tag <> string.join(attrs, "") <> " />"
+            _ -> {
+              "<"
+              <> tag
+              <> string.join(attrs, "")
+              <> ">"
+              <> vxmls_to_jsx(children)
+              <> "</"
+              <> tag
+              <> ">"
+            }
           }
         }
 
@@ -101,22 +94,20 @@ fn debug_print_vxml_as_jsx_internal(
             |> list.contains("is_self_closed")
 
           case is_self_closed {
-            True -> #(
-              output <> "<" <> tag <> string.join(attrs, "") <> " />",
-              False,
-            )
-            False -> #(
-              output
-                <> "<"
+            True -> {
+              "<" <> tag <> string.join(attrs, "") <> " />"
+            }
+
+            False -> {
+                "<"
                 <> tag
                 <> string.join(attrs, "")
                 <> ">"
-                <> debug_print_vxmls_as_jsx_internal(children, "")
+                <> vxmls_to_jsx(children)
                 <> "</"
                 <> tag
-                <> ">",
-              False,
-            )
+                <> ">"
+            }
           }
         }
       }
@@ -124,56 +115,27 @@ fn debug_print_vxml_as_jsx_internal(
   }
 }
 
-fn debug_print_vxmls_as_jsx_internal(
-  vxmls: List(VXML),
-  output: String,
-) -> String {
-  case vxmls {
-    [] -> output
-    [last] -> {
-      let #(output, _) =
-        debug_print_vxml_as_jsx_internal(last, option.None, output)
-      output
-    }
-    [first, next, ..rest] -> {
-      let #(output, skip_next) =
-        debug_print_vxml_as_jsx_internal(first, option.Some(next), output)
-      case skip_next {
-        True -> {
-          debug_print_vxmls_as_jsx_internal(rest, output)
-        }
-        False -> {
-          debug_print_vxmls_as_jsx_internal(list.append([next], rest), output)
-        }
-      }
-    }
-  }
-}
-
-pub fn solid_emitter(vxmls: List(VXML)) -> String {
-  debug_print_vxmls_as_jsx_internal(vxmls, "")
-}
-
-fn add_boilerplate(output: String) -> String {
+fn add_solid_boilerplate(output: String) -> String {
   "const Article = () => {
-    return <>" <> output <> "</>
-  }
-  export default Article
-  "
+  return <>" <> output <> "</>
+}
+export default Article
+"
 }
 
 pub fn write_file_solid(output: String, path: String) -> Nil {
-  let assert Ok(Nil) = simplifile.write(path, add_boilerplate(output))
-  // case shellout.command("leptosfmt", with: [path], in: ".", opt: []) {
-  //   Ok(_) -> io.println("Output formatted with leptosfmt")
-  //   Error(#(_, error)) -> io.println("Error formating output : " <> error)
-  // }
-  Nil
+  output
+  |> add_solid_boilerplate
+  |> simplifile.write(path, _)
+  |> result.unwrap(Nil)
 }
 
 pub fn write_splitted_jsx(vxml: VXML, path: String) -> Nil {
   split_children_of_node(vxml)
   |> dict.each(fn(split_key, node) {
-    write_file_solid(solid_emitter([node]), path <> "/" <> split_key <> ".tsx")
+    write_file_solid(
+      vxml_to_jsx(node),
+      path <> "/" <> split_key <> ".tsx"
+    )
   })
 }
