@@ -94,11 +94,15 @@ pub fn vxml_to_jsx_blamed_lines(t: VXML, indent: Int) -> List(BlamedLine) {
           blame: t.blame,
           indent: indent,
           suffix: {
-            case i > 0 {
+            case i > 0 || {string.starts_with(t.content, " ")} {
               True -> "{\" \"}"
               False -> ""
             } 
-            <> jsx_string_processor(t.content)
+            <> jsx_string_processor(t.content) <>
+            case i == list.length(blamed_contents) - 1 && string.ends_with(t.content, " ") {
+              True -> "{\" \"}"
+              False -> ""
+            } 
           },
         )
       })
