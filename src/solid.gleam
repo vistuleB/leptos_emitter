@@ -94,16 +94,15 @@ pub fn vxml_to_jsx_blamed_lines(t: VXML, indent: Int) -> List(BlamedLine) {
           blame: t.blame,
           indent: indent,
           suffix: {
-            case i > 0 || {string.starts_with(t.content, " ")} {
-              True -> "{\" \"}"
-              False -> ""
-            } 
-            <> jsx_string_processor(t.content) <>
-            case i == list.length(blamed_contents) - 1 && string.ends_with(t.content, " ") {
-              True -> "{\" \"}"
-              False -> ""
-            } 
-          },
+            let need_explicit_space_start = i == 0 && string.starts_with(t.content, " ")
+            let need_explicit_space_end = i == list.length(blamed_contents) - 1 && string.ends_with(t.content, " ")
+            case need_explicit_space_start, need_explicit_space_end {
+              False, False -> jsx_string_processor(t.content)
+              True, False -> "{\" \"}" <> jsx_string_processor(string.trim_start(t.content))
+              False, True -> jsx_string_processor(string.trim_end(t.content)) <> "{\" \"}"
+              True, True -> "{\" \"}" <> jsx_string_processor(string.trim(t.content)) <> "{\" \"}"
+            }
+          }
         )
       })
     }
@@ -214,85 +213,4 @@ pub fn write_splitted_jsx(vxml: VXML, path: String) -> Nil {
       path <> "/" <> split_key <> ".tsx",
     )
   })
-}
-
-// ****************************
-// for reference (simpler '{\" \"}' logic):
-// ****************************
-pub fn legacy_vxml_direct_to_jsx(
-  t: VXML,
-  _: Int
-) -> String {
-  case t {
-    T(_, blamed_contents) -> {
-      blamed_contents
-      |> list.map(fn(t) {jsx_string_processor(t.content)})
-      |> string.join("\n{\" \"}")
-    }
-
-    V(_, tag, blamed_attributes, children) -> {
-      case list.is_empty(children) {
-        False -> {
-          let attrs =
-            blamed_attributes
-            |> list.filter(filter_counter_attributes)
-            |> list.map(fn(t) { to_solid_attribute(t.key, t.value) })
-
-          let is_self_closed =
-            blamed_attributes
-            |> list.map(fn(t) { t.key })
-            |> list.contains("is_self_closed")
-
-          case is_self_closed {
-            True -> "<" <> tag <> string.join(attrs, "") <> " />"
-            _ -> {
-              "<"
-              <> tag
-              <> string.join(attrs, "")
-              <> ">"
-              <> legacy_vxmls_direct_to_jsx(children)
-              <> "</"
-              <> tag
-              <> ">"
-            }
-          }
-        }
-
-        True -> {
-          let attrs =
-            blamed_attributes
-            |> list.filter(filter_counter_attributes)
-            |> list.map(fn(t) { to_solid_attribute(t.key, t.value) })
-
-          let is_self_closed =
-            blamed_attributes
-            |> list.map(fn(t) { t.key })
-            |> list.contains("is_self_closed")
-
-          case is_self_closed {
-            True -> {
-              "<" <> tag <> string.join(attrs, "") <> " />"
-            }
-
-            False -> {
-                "<"
-                <> tag
-                <> string.join(attrs, "")
-                <> ">"
-                <> legacy_vxmls_direct_to_jsx(children)
-                <> "</"
-                <> tag
-                <> ">"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-fn legacy_vxmls_direct_to_jsx(vxmls: List(VXML)) -> String {
-  vxmls
-  |> list.map(legacy_vxml_direct_to_jsx(_, 0))
-  |> string.join("")
 }
