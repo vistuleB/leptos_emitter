@@ -40,12 +40,6 @@ fn jsx_string_processor(content: String) -> String {
   |> string.replace(">", "&gt;")
 }
 
-fn vxmls_to_jsx(vxmls: List(VXML), indent: Int) -> List(BlamedLine) {
-  vxmls
-  |> list.map(vxml_to_jsx(_, indent))
-  |> list.flatten()
-}
-
 fn is_self_closed(attributes: List(BlamedAttribute)) {
   attributes
   |> list.map(fn(t) { t.key })
@@ -92,7 +86,7 @@ fn attributes_to_blamed_lines(
   }
 }
 
-pub fn vxml_to_jsx(t: VXML, indent: Int) -> List(BlamedLine) {
+pub fn vxml_to_jsx_blamed_lines(t: VXML, indent: Int) -> List(BlamedLine) {
   case t {
     T(_, blamed_contents) -> {
       blamed_contents
@@ -114,7 +108,7 @@ pub fn vxml_to_jsx(t: VXML, indent: Int) -> List(BlamedLine) {
           list.flatten([
             [tag_open_blamed_line(blame, tag, indent, ">", blamed_attributes)],
             attributes_to_blamed_lines(blamed_attributes, indent + 2, ">"),
-            vxmls_to_jsx(children, indent + 2),
+            vxmls_to_jsx_blamed_lines(children, indent + 2),
             [tag_close_line],
           ])
         }
@@ -165,13 +159,22 @@ pub fn vxml_to_jsx(t: VXML, indent: Int) -> List(BlamedLine) {
   }
 }
 
-pub fn vxml_to_jsx_blamed_lines(vxmls: List(VXML)) -> String {
-  blamed_lines_to_table_vanilla_bob_and_jane_sue("", vxmls_to_jsx(vxmls, 0))
+pub fn vxmls_to_jsx_blamed_lines(vxmls: List(VXML), indent: Int) -> List(BlamedLine) {
+  vxmls
+  |> list.map(vxml_to_jsx_blamed_lines(_, indent))
+  |> list.flatten
 }
 
-pub fn vxml_to_jsx_string(vxml: VXML) -> String {
-  vxml_to_jsx(vxml, 0)
-  |> blamed_lines_to_string()
+pub fn vxml_to_jsx(vxml: VXML) -> String {
+  vxml_to_jsx_blamed_lines(vxml, 0)
+  |> blamed_lines_to_string
+}
+
+pub fn debug_vxml_to_jsx(banner: String, vxml: VXML) -> String {
+  vxml
+  |> vxml_parser.debug_annotate_blames
+  |> vxml_to_jsx_blamed_lines(_, 0)
+  |> blamedlines.blamed_lines_to_table_vanilla_bob_and_jane_sue(banner, _)
 }
 
 fn add_solid_boilerplate(output: String) -> String {
@@ -193,7 +196,7 @@ pub fn write_splitted_jsx(vxml: VXML, path: String) -> Nil {
   split_children_of_node(vxml)
   |> dict.each(fn(split_key, node) {
     write_file_solid(
-      vxml_to_jsx_string(node),
+      vxml_to_jsx(node),
       path <> "/" <> split_key <> ".tsx",
     )
   })

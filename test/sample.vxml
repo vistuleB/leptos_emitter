@@ -17,5 +17,11 @@
             <> Grid
                 cols 3
                 <> Item
+                    <>
+                        "hello world"
+                    <>
+                        "second hello world"
+                        "third hello world"
+                        "$${x^2 + a^2}$$ and $x < 2$"
                 <> Item
                 <> Item
