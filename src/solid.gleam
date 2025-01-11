@@ -215,3 +215,84 @@ pub fn write_splitted_jsx(vxml: VXML, path: String) -> Nil {
     )
   })
 }
+
+// ****************************
+// for reference (simpler '{\" \"}' logic):
+// ****************************
+pub fn legacy_vxml_direct_to_jsx(
+  t: VXML,
+  _: Int
+) -> String {
+  case t {
+    T(_, blamed_contents) -> {
+      blamed_contents
+      |> list.map(fn(t) {jsx_string_processor(t.content)})
+      |> string.join("\n{\" \"}")
+    }
+
+    V(_, tag, blamed_attributes, children) -> {
+      case list.is_empty(children) {
+        False -> {
+          let attrs =
+            blamed_attributes
+            |> list.filter(filter_counter_attributes)
+            |> list.map(fn(t) { to_solid_attribute(t.key, t.value) })
+
+          let is_self_closed =
+            blamed_attributes
+            |> list.map(fn(t) { t.key })
+            |> list.contains("is_self_closed")
+
+          case is_self_closed {
+            True -> "<" <> tag <> string.join(attrs, "") <> " />"
+            _ -> {
+              "<"
+              <> tag
+              <> string.join(attrs, "")
+              <> ">"
+              <> legacy_vxmls_direct_to_jsx(children)
+              <> "</"
+              <> tag
+              <> ">"
+            }
+          }
+        }
+
+        True -> {
+          let attrs =
+            blamed_attributes
+            |> list.filter(filter_counter_attributes)
+            |> list.map(fn(t) { to_solid_attribute(t.key, t.value) })
+
+          let is_self_closed =
+            blamed_attributes
+            |> list.map(fn(t) { t.key })
+            |> list.contains("is_self_closed")
+
+          case is_self_closed {
+            True -> {
+              "<" <> tag <> string.join(attrs, "") <> " />"
+            }
+
+            False -> {
+                "<"
+                <> tag
+                <> string.join(attrs, "")
+                <> ">"
+                <> legacy_vxmls_direct_to_jsx(children)
+                <> "</"
+                <> tag
+                <> ">"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+fn legacy_vxmls_direct_to_jsx(vxmls: List(VXML)) -> String {
+  vxmls
+  |> list.map(legacy_vxml_direct_to_jsx(_, 0))
+  |> string.join("")
+}
