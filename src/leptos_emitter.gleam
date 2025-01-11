@@ -1,7 +1,10 @@
 import gleam/io
 import gleam/string
 import leptos.{leptos_emitter, write_file_leptos, write_splitted_leptos}
-import solid.{vxml_to_jsx, write_file_solid, write_splitted_jsx}
+import solid.{
+  vxml_to_jsx_blamed_lines, vxml_to_jsx_string, write_file_solid,
+  write_splitted_jsx,
+}
 import vxml_parser.{type VXML, parse_file}
 
 pub fn write_splitted(vxml: VXML, path: String, emitter: String) {
@@ -15,7 +18,7 @@ pub fn write_splitted(vxml: VXML, path: String, emitter: String) {
 pub fn write_file(vxml: VXML, path: String, emitter: String) {
   case emitter {
     "leptos" -> write_file_leptos(leptos_emitter([vxml]), path)
-    "solid" -> write_file_solid(vxml_to_jsx(vxml), path)
+    "solid" -> write_file_solid(vxml_to_jsx_string(vxml), path)
     _ -> io.println_error("Emitter " <> emitter <> " is not supported")
   }
 }
@@ -27,7 +30,8 @@ pub fn main() {
     Ok(vxmls) -> {
       io.println("\nsuccessfully parsed; pure string emitter:\n")
       io.println("\nmakeshit leptos-debug-emitter:\n")
-      let _ = write_file_leptos(leptos_emitter(vxmls), "test/output.rs")
+      io.println(vxml_to_jsx_blamed_lines(vxmls))
+      // let _ = write_file_leptos(leptos_emitter(vxmls), "test/output.rs")
     }
     Error(e) -> io.println("there was an error: " <> string.inspect(e))
   }
