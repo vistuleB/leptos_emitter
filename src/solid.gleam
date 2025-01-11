@@ -89,11 +89,17 @@ pub fn vxml_to_jsx_blamed_lines(t: VXML, indent: Int) -> List(BlamedLine) {
   case t {
     T(_, blamed_contents) -> {
       blamed_contents
-      |> list.map(fn(t) {
+      |> list.index_map(fn(t, i) {
         BlamedLine(
           blame: t.blame,
           indent: indent,
-          suffix: jsx_string_processor(t.content),
+          suffix: {
+            case i > 0 {
+              True -> "{\" \"}"
+              False -> ""
+            } 
+            <> jsx_string_processor(t.content)
+          },
         )
       })
     }
