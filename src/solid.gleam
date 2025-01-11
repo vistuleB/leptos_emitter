@@ -1,6 +1,5 @@
 import blamedlines.{
-  type Blame, type BlamedLine, BlamedLine, blamed_lines_to_string,
-  blamed_lines_to_table_vanilla_bob_and_jane_sue,
+  type Blame, type BlamedLine, BlamedLine
 }
 import gleam/dict
 import gleam/float
@@ -165,23 +164,28 @@ pub fn vxmls_to_jsx_blamed_lines(vxmls: List(VXML), indent: Int) -> List(BlamedL
   |> list.flatten
 }
 
-pub fn vxml_to_jsx(vxml: VXML) -> String {
-  vxml_to_jsx_blamed_lines(vxml, 0)
-  |> blamed_lines_to_string
+pub fn vxml_to_jsx(vxml: VXML, indent: Int) -> String {
+  vxml_to_jsx_blamed_lines(vxml, indent)
+  |> blamedlines.blamed_lines_to_string
 }
 
 pub fn debug_vxml_to_jsx(banner: String, vxml: VXML) -> String {
   vxml
   |> vxml_parser.debug_annotate_blames
-  |> vxml_to_jsx_blamed_lines(_, 0)
+  |> vxml_to_jsx_blamed_lines(0)
   |> blamedlines.blamed_lines_to_table_vanilla_bob_and_jane_sue(banner, _)
 }
 
-fn add_solid_boilerplate(output: String) -> String {
+pub fn add_solid_boilerplate(output: String) -> String {
   "const Article = () => {
-  return <>\n" <> output <> "</>
-}
-export default Article
+  return (
+    <>
+" <> output <> "
+    </>
+  );
+};
+
+export default Article;
 "
 }
 
@@ -196,7 +200,7 @@ pub fn write_splitted_jsx(vxml: VXML, path: String) -> Nil {
   split_children_of_node(vxml)
   |> dict.each(fn(split_key, node) {
     write_file_solid(
-      vxml_to_jsx(node),
+      vxml_to_jsx(node, 0),
       path <> "/" <> split_key <> ".tsx",
     )
   })
