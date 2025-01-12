@@ -1,12 +1,15 @@
+import blamedlines.{
+  type Blame, type BlamedLine, BlamedLine
+}
 import gleam/dict
-import gleam/result
 import gleam/float
 import gleam/int
 import gleam/list
+import gleam/result
 import gleam/string
 import shared.{filter_counter_attributes, split_children_of_node}
 import simplifile
-import vxml_parser.{type VXML, T, V}
+import vxml_parser.{type BlamedAttribute, type VXML, T, V}
 
 fn to_solid_attribute(key, value) -> String {
   let value = string.trim(value)
@@ -36,77 +39,126 @@ fn jsx_string_processor(content: String) -> String {
   |> string.replace(">", "&gt;")
 }
 
-fn vxmls_to_jsx(
-  vxmls: List(VXML)
-) -> String {
-  vxmls
-  |> list.map(vxml_to_jsx)
-  |> string.join("")
+fn is_self_closed(attributes: List(BlamedAttribute)) {
+  attributes
+  |> list.map(fn(t) { t.key })
+  |> list.contains("is_self_closed")
 }
 
-pub fn vxml_to_jsx(
-  t: VXML
-) -> String {
+fn tag_open_blamed_line(
+  blame: Blame,
+  tag: String,
+  indent: Int,
+  closing: String,
+  attributes: List(BlamedAttribute),
+) {
+  case list.is_empty(attributes) {
+    True ->
+      BlamedLine(blame: blame, indent: indent, suffix: "<" <> tag <> closing)
+    False -> BlamedLine(blame: blame, indent: indent, suffix: "<" <> tag)
+  }
+}
+
+fn attributes_to_blamed_lines(
+  attributes: List(BlamedAttribute),
+  indent: Int,
+  inlude_at_last: String,
+) -> List(BlamedLine) {
+  case
+    attributes
+    |> list.filter(filter_counter_attributes)
+    |> list.map(fn(t) {
+      BlamedLine(
+        blame: t.blame,
+        indent: indent + 2,
+        suffix: to_solid_attribute(t.key, t.value),
+      )
+    })
+    |> list.reverse()
+  {
+    [] -> []
+    [last, ..rest] -> {
+      rest
+      |> list.reverse()
+      |> list.append([BlamedLine(..last, suffix: last.suffix <> inlude_at_last)])
+    }
+  }
+}
+
+pub fn vxml_to_jsx_blamed_lines(t: VXML, indent: Int) -> List(BlamedLine) {
   case t {
     T(_, blamed_contents) -> {
       blamed_contents
-      |> list.map(fn(t) {jsx_string_processor(t.content)})
-      |> string.join("\n{\" \"}")
-    }
-
-    V(_, tag, blamed_attributes, children) -> {
-      case list.is_empty(children) {
-        False -> {
-          let attrs =
-            blamed_attributes
-            |> list.filter(filter_counter_attributes)
-            |> list.map(fn(t) { to_solid_attribute(t.key, t.value) })
-
-          let is_self_closed =
-            blamed_attributes
-            |> list.map(fn(t) { t.key })
-            |> list.contains("is_self_closed")
-
-          case is_self_closed {
-            True -> "<" <> tag <> string.join(attrs, "") <> " />"
-            _ -> {
-              "<"
-              <> tag
-              <> string.join(attrs, "")
-              <> ">"
-              <> vxmls_to_jsx(children)
-              <> "</"
-              <> tag
-              <> ">"
+      |> list.index_map(fn(t, i) {
+        BlamedLine(
+          blame: t.blame,
+          indent: indent,
+          suffix: {
+            let need_explicit_space_start = i == 0 && string.starts_with(t.content, " ")
+            let need_explicit_space_end = i == list.length(blamed_contents) - 1 && string.ends_with(t.content, " ")
+            case need_explicit_space_start, need_explicit_space_end {
+              False, False -> jsx_string_processor(t.content)
+              True, False -> "{\" \"}" <> jsx_string_processor(string.trim_start(t.content))
+              False, True -> jsx_string_processor(string.trim_end(t.content)) <> "{\" \"}"
+              True, True -> "{\" \"}" <> jsx_string_processor(string.trim(t.content)) <> "{\" \"}"
             }
           }
+        )
+      })
+    }
+
+    V(blame, tag, blamed_attributes, children) -> {
+      case list.is_empty(children) {
+        False -> {
+          let tag_close_line =
+            BlamedLine(blame: blame, indent: indent, suffix: "</" <> tag <> ">")
+
+          list.flatten([
+            [tag_open_blamed_line(blame, tag, indent, ">", blamed_attributes)],
+            attributes_to_blamed_lines(blamed_attributes, indent + 2, ">"),
+            vxmls_to_jsx_blamed_lines(children, indent + 2),
+            [tag_close_line],
+          ])
         }
 
         True -> {
-          let attrs =
-            blamed_attributes
-            |> list.filter(filter_counter_attributes)
-            |> list.map(fn(t) { to_solid_attribute(t.key, t.value) })
-
-          let is_self_closed =
-            blamed_attributes
-            |> list.map(fn(t) { t.key })
-            |> list.contains("is_self_closed")
-
-          case is_self_closed {
+          case is_self_closed(blamed_attributes) {
             True -> {
-              "<" <> tag <> string.join(attrs, "") <> " />"
+              list.flatten([
+                [
+                  tag_open_blamed_line(
+                    blame,
+                    tag,
+                    indent,
+                    "/>",
+                    blamed_attributes,
+                  ),
+                ],
+                attributes_to_blamed_lines(blamed_attributes, indent + 2, "/>"),
+              ])
             }
 
             False -> {
-                "<"
-                <> tag
-                <> string.join(attrs, "")
-                <> ">"
-                <> vxmls_to_jsx(children)
-                <> "</"
-                <> tag
-                <> ">"
+              let tag_close_line =
+                BlamedLine(
+                  blame: blame,
+                  indent: indent,
+                  suffix: "</" <> tag <> ">",
+                )
+
+              list.flatten([
+                [
+                  tag_open_blamed_line(
+                    blame,
+                    tag,
+                    indent,
+                    ">",
+                    blamed_attributes,
+                  ),
+                ],
+                attributes_to_blamed_lines(blamed_attributes, indent + 2, ">"),
+                [tag_close_line],
+              ])
             }
           }
         }
@@ -115,11 +167,34 @@ pub fn vxml_to_jsx(
   }
 }
 
-fn add_solid_boilerplate(output: String) -> String {
-  "const Article = () => {
-  return <>" <> output <> "</>
+pub fn vxmls_to_jsx_blamed_lines(vxmls: List(VXML), indent: Int) -> List(BlamedLine) {
+  vxmls
+  |> list.map(vxml_to_jsx_blamed_lines(_, indent))
+  |> list.flatten
 }
-export default Article
+
+pub fn vxml_to_jsx(vxml: VXML, indent: Int) -> String {
+  vxml_to_jsx_blamed_lines(vxml, indent)
+  |> blamedlines.blamed_lines_to_string
+}
+
+pub fn debug_vxml_to_jsx(banner: String, vxml: VXML) -> String {
+  vxml
+  |> vxml_parser.debug_annotate_blames
+  |> vxml_to_jsx_blamed_lines(0)
+  |> blamedlines.blamed_lines_to_table_vanilla_bob_and_jane_sue(banner, _)
+}
+
+pub fn add_solid_boilerplate(output: String) -> String {
+  "const Article = () => {
+  return (
+    <>
+" <> output <> "
+    </>
+  );
+};
+
+export default Article;
 "
 }
 
@@ -134,8 +209,8 @@ pub fn write_splitted_jsx(vxml: VXML, path: String) -> Nil {
   split_children_of_node(vxml)
   |> dict.each(fn(split_key, node) {
     write_file_solid(
-      vxml_to_jsx(node),
-      path <> "/" <> split_key <> ".tsx"
+      vxml_to_jsx(node, 0),
+      path <> "/" <> split_key <> ".tsx",
     )
   })
 }
