@@ -94,8 +94,8 @@ pub fn vxml_to_jsx_blamed_lines(t: VXML, indent: Int) -> List(BlamedLine) {
           blame: t.blame,
           indent: indent,
           suffix: {
-            let need_explicit_space_start = i == 0 && string.starts_with(t.content, " ")
-            let need_explicit_space_end = i == list.length(blamed_contents) - 1 && string.ends_with(t.content, " ")
+            let need_explicit_space_start = i == 0 && { string.starts_with(t.content, " ") || string.is_empty(t.content) }
+            let need_explicit_space_end = i == list.length(blamed_contents) - 1 && { string.ends_with(t.content, " ") || string.is_empty(t.content) }
             case need_explicit_space_start, need_explicit_space_end {
               False, False -> jsx_string_processor(t.content)
               True, False -> "{\" \"}" <> jsx_string_processor(string.trim_start(t.content))
@@ -106,6 +106,8 @@ pub fn vxml_to_jsx_blamed_lines(t: VXML, indent: Int) -> List(BlamedLine) {
         )
       })
     }
+
+
 
     V(blame, tag, blamed_attributes, children) -> {
       case list.is_empty(children) {
